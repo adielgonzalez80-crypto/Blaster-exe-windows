@@ -77,6 +77,7 @@ public class MainActivity extends Activity {
         LinearLayout icons = row();
         icons.addView(desktopIcon("▤", "Archivos", v -> openPicker()), weighted());
         icons.addView(desktopIcon("EXE", "Programas", v -> showPrograms()), weighted());
+        icons.addView(desktopIcon("▶", "Lanzador", v -> showLauncher()), weighted());
         icons.addView(desktopIcon("⚙", "Diagnóstico", v -> showDiagnostics()), weighted());
         icons.addView(desktopIcon("i", "Acerca de", v -> showAbout()), weighted());
         root.addView(icons, lp(-1, dp(112)));
@@ -180,7 +181,7 @@ public class MainActivity extends Activity {
 
     private void openRuntimePicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.setType("application/zip");
+        intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         try { startActivityForResult(intent, PICK_RUNTIME); }
         catch (Exception e) { Toast.makeText(this, "No se pudo abrir el selector del paquete runtime.", Toast.LENGTH_LONG).show(); }
@@ -192,6 +193,15 @@ public class MainActivity extends Activity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         try { startActivityForResult(intent, PICK_EXE); }
         catch (Exception e) { Toast.makeText(this, "No se pudo abrir el selector de archivos.", Toast.LENGTH_LONG).show(); }
+    }
+
+    private void showLauncher() {
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Lanzador BLASTER")
+            .setMessage("Estado del motor: " + windowsRuntime.getStatus() + "\n\nSelecciona un EXE para prepararlo. Solo podrá ejecutarse cuando el runtime real esté instalado y funcione en este dispositivo.")
+            .setPositiveButton("Seleccionar EXE", (d, w) -> openPicker())
+            .setNeutralButton("Importar runtime ZIP", (d, w) -> openRuntimePicker())
+            .setNegativeButton("Cerrar", null).show();
     }
 
     private void showPrograms() {
