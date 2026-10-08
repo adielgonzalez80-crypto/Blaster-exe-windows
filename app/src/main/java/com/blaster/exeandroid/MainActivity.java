@@ -114,7 +114,7 @@ public class MainActivity extends Activity {
         inside.addView(selectedFile);
         fileMeta = label("Puedes elegir un archivo desde Descargas o cualquier carpeta accesible.", 11, MUTED, false);
         inside.addView(fileMeta);
-        Button installRuntime = button("⚙   Instalar paquete del motor Windows", Color.rgb(76, 91, 130));
+        Button installRuntime = button("⚙   Importar paquete del motor BLASTER", Color.rgb(76, 91, 130));
         installRuntime.setTextSize(12);
         installRuntime.setOnClickListener(v -> openRuntimePicker());
         inside.addView(installRuntime, lp(-1, dp(44)));
@@ -197,7 +197,7 @@ public class MainActivity extends Activity {
     private void showPrograms() {
         new android.app.AlertDialog.Builder(this)
             .setTitle("Programas")
-            .setMessage("Aquí aparecerán los programas seleccionados y el estado de compatibilidad. El motor Windows todavía debe integrarse.")
+            .setMessage("ADMINISTRADOR DE PROGRAMAS\n\n• Seleccionar archivo .EXE: disponible\n• Motor Windows: " + windowsRuntime.getStatus() + "\n• Lanzador: " + (windowsRuntime.getLauncher().canExecute() ? "detectado" : "falta") + "\n\nLa lista de programas instalados y la apertura de ventanas de Windows se activarán cuando el paquete real del motor esté compilado e instalado.")
             .setPositiveButton("Seleccionar EXE", (d, w) -> openPicker())
             .setNegativeButton("Cerrar", null).show();
     }
@@ -262,14 +262,11 @@ public class MainActivity extends Activity {
         }
         if (!windowsRuntime.isInstalled()) {
             new android.app.AlertDialog.Builder(this)
-                .setTitle("Falta instalar el motor Windows")
-                .setMessage("BLASTER puede seleccionar el archivo, pero todavía no incluye Wine/Box64 ni las bibliotecas del runtime. No se ha ejecutado el EXE.\n\nPuedes revisar Winlator, un proyecto Android que integra Wine y Box64. Esta descarga es externa y no instala automáticamente el motor dentro de BLASTER.")
-                .setPositiveButton("Ver Winlator", (d, w) -> {
-                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/brunodev85/winlator/releases"))); }
-                    catch (Exception e) { Toast.makeText(this, "Abre github.com/brunodev85/winlator/releases en tu navegador.", Toast.LENGTH_LONG).show(); }
-                })
-                .setNegativeButton("Cancelar", null)
-                .setNeutralButton("Diagnóstico", (d, w) -> showDiagnostics())
+                .setTitle("Motor Windows todavía no disponible")
+                .setMessage(windowsRuntime.getStatus() + "\\n\\nEl archivo EXE está seleccionado, pero no se ejecutará hasta que BLASTER tenga su paquete real de Box64 + Wine WOW64. El instalador solo acepta el ZIP oficial del runtime BLASTER; no elijas un ZIP cualquiera.")
+                .setPositiveButton("Ver diagnóstico", (d, w) -> showDiagnostics())
+                .setNeutralButton("Importar paquete", (d, w) -> openRuntimePicker())
+                .setNegativeButton("Cerrar", null)
                 .show();
             return;
         }
