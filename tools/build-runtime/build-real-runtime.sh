@@ -42,7 +42,26 @@ cmake -S "${SRC}/box64" -B "${SRC}/box64/build" \
   -DCMAKE_INSTALL_PREFIX=/usr
 
 cmake --build "${SRC}/box64/build" -j"${JOBS}"
-cmake --install "${SRC}/box64/build" --prefix "${OUT}"
+
+# Avoid CMake's full install target: it also writes host integration files
+# under /etc/binfmt.d, which is forbidden on GitHub runners and irrelevant
+# inside an Android app. Stage only the Android executable.
+BOX64_BIN="${SRC}/box64/build/box64"
+if [ ! -f "${BOX64_BIN}" ]; then
+  BOX64_BIN="$(find "${SRC}/box64/build" -type f -name box64 -perm -u+x -print -quit)"
+fi
+if [ -z "${BOX64_BIN}" ] || [ ! -f "${BOX64_BIN}" ]; then
+  echo "ERROR: Box64 compiló, pero no se encontró el ejecutable."
+  find "${SRC}/box64/build" -maxdepth 4 -type f -name 'box64*' -print || true
+  exit 21
+fi
+install -m 0755 "${BOX64_BIN}" "${OUT}/bin/box64"
+
+NDK_CXX="${NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so"
+if [ -f "${NDK_CXX}" ]; then
+  mkdir -p "${OUT}/lib"
+  install -m 0644 "${NDK_CXX}" "${OUT}/lib/libc++_shared.so"
+fi
 
 if [ ! -x "${OUT}/bin/box64" ]; then
   echo "ERROR: Box64 ARM64 no fue generado."
