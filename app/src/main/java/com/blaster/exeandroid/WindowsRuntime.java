@@ -34,13 +34,13 @@ public final class WindowsRuntime {
     public File getRuntimeRoot() { return new File(context.getFilesDir(), "blaster-runtime"); }
     public File getLauncher() { return new File(getRuntimeRoot(), "launch-windows"); }
     public File getBox64() { return new File(new File(getRuntimeRoot(), "bin"), "box64"); }
-    public File getWine64() { return new File(new File(getRuntimeRoot(), "wine/bin"), "wine64"); }
+    public File getWine64() { return new File(new File(getRuntimeRoot(), "wine/usr/local/bin"), "wine64"); }
     public File getRuntimeManifest() { return new File(getRuntimeRoot(), "runtime.json"); }
 
     public boolean isInstalled() {
         return getLauncher().isFile() && getLauncher().canExecute()
                 && getBox64().isFile() && getBox64().canExecute()
-                && getWine64().isFile() && getWine64().canExecute();
+                && getWine64().isFile() && getWine64().canExecute()\n                && getRuntimeManifest().isFile();
     }
 
     public String getStatus() {
@@ -49,7 +49,7 @@ public final class WindowsRuntime {
         boolean first = true;
         if (!getLauncher().isFile()) { missing.append("launcher"); first = false; }
         if (!getBox64().isFile()) { if (!first) missing.append(", "); missing.append("Box64"); first = false; }
-        if (!getWine64().isFile()) { if (!first) missing.append(", "); missing.append("Wine64"); }
+        if (!getWine64().isFile()) { if (!first) missing.append(", "); missing.append("Wine64"); first = false; }\n        if (!getRuntimeManifest().isFile()) { if (!first) missing.append(", "); missing.append("runtime.json"); }
         return missing.toString();
     }
 
@@ -119,10 +119,10 @@ public final class WindowsRuntime {
 
         File launcher = new File(temp, "launch-windows");
         File box64 = new File(temp, "bin/box64");
-        File wine64 = new File(temp, "wine/bin/wine64");
-        if (!launcher.isFile() || !box64.isFile() || !wine64.isFile()) {
+        File wine64 = new File(temp, "wine/usr/local/bin/wine64");
+        File manifest = new File(temp, "runtime.json");\n        if (!launcher.isFile() || !box64.isFile() || !wine64.isFile() || !manifest.isFile()) {
             deleteTree(temp);
-            throw new IOException("El paquete no contiene el runtime requerido: launch-windows, Box64 y Wine64.");
+            throw new IOException("Runtime inválido: faltan launch-windows, Box64, Wine64 o runtime.json.");
         }
 
         launcher.setExecutable(true, false);
@@ -149,7 +149,7 @@ public final class WindowsRuntime {
         ProcessBuilder builder = new ProcessBuilder(getLauncher().getAbsolutePath(), exe.getAbsolutePath());
         builder.directory(getRuntimeRoot());
         builder.environment().put("BLASTER_RUNTIME", getRuntimeRoot().getAbsolutePath());
-        builder.environment().put("BLASTER_EXE", exe.getAbsolutePath());
+        builder.environment().put("BLASTER_EXE", exe.getAbsolutePath());\n        builder.environment().put("HOME", new File(getRuntimeRoot(), "home").getAbsolutePath());\n        builder.environment().put("TMPDIR", new File(getRuntimeRoot(), "tmp").getAbsolutePath());
         builder.redirectErrorStream(true);
         builder.redirectOutput(ProcessBuilder.Redirect.appendTo(log));
         return builder.start();
