@@ -1,0 +1,11 @@
+{
+  "runtime": "blaster-windows",
+  "version": 1,
+  "architecture": "arm64",
+  "components": {
+    "launcher": "launch-windows",
+    "box64": "bin/box64",
+    "wine64": "wine/bin/wine64"
+  },
+  "status": "contract-only"
+}
