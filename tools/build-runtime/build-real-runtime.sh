@@ -31,7 +31,7 @@ grep -n 'glob\.h' "${SRC}/box64/src/steam.c" || true
 cmake -S "${SRC}/box64" -B "${SRC}/box64/build" \
   -DCMAKE_BUILD_TYPE=Release \
   -DANDROID=ON \
-  -DTERMUX=ON \
+  -DTERMUX=OFF \
   -DARM_DYNAREC=ON \
   -DBOX32=OFF \
   -DWOW64=OFF \
