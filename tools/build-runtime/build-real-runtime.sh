@@ -19,6 +19,11 @@ fi
 
 echo "[1/5] Clonar y compilar Box64 para Android ARM64"
 git clone --depth 1 https://github.com/ptitSeb/box64.git "${SRC}/box64"
+# Android NDK builds may not expose glob declarations through the default feature macros.
+# Include the POSIX header explicitly before compiling Box64's optional Steam helpers.
+if ! grep -q '^#include <glob.h>' "${SRC}/box64/src/steam.c"; then
+  sed -i '1i#include <glob.h>' "${SRC}/box64/src/steam.c"
+fi
 
 cmake -S "${SRC}/box64" -B "${SRC}/box64/build" \
   -DCMAKE_BUILD_TYPE=Release \
