@@ -196,12 +196,53 @@ public class MainActivity extends Activity {
     }
 
     private void showLauncher() {
-        new android.app.AlertDialog.Builder(this)
-            .setTitle("Lanzador BLASTER")
-            .setMessage("Estado del motor: " + windowsRuntime.getStatus() + "\n\nSelecciona un EXE para prepararlo. Solo podrá ejecutarse cuando el runtime real esté instalado y funcione en este dispositivo.")
-            .setPositiveButton("Seleccionar EXE", (d, w) -> openPicker())
-            .setNeutralButton("Importar runtime ZIP", (d, w) -> openRuntimePicker())
-            .setNegativeButton("Cerrar", null).show();
+        android.app.AlertDialog dialog;
+        LinearLayout panel = column();
+        panel.setPadding(dp(18), dp(8), dp(18), dp(8));
+        panel.setBackground(round(BG, 18));
+
+        TextView brand = label("BLASTER  /  CENTRO DE LANZAMIENTO", 13, CYAN, true);
+        panel.addView(brand, lp(-1, dp(38)));
+        TextView headline = label("Ejecutar programas", 23, WHITE, true);
+        panel.addView(headline, lp(-1, dp(42)));
+        TextView explanation = label("Selecciona un archivo EXE, instala el paquete del motor y consulta el estado desde esta ventana.", 12, MUTED, false);
+        explanation.setPadding(0, 0, 0, dp(12));
+        panel.addView(explanation, lp(-1, -2));
+
+        TextView statusTitle = label("ESTADO DEL MOTOR", 10, CYAN, true);
+        panel.addView(statusTitle, lp(-1, dp(24)));
+        TextView status = label(windowsRuntime.getStatus(), 12, WHITE, false);
+        status.setPadding(dp(12), dp(10), dp(12), dp(10));
+        status.setBackground(round(PANEL, 12));
+        panel.addView(status, lp(-1, -2));
+
+        Button choose = button("▣   Seleccionar archivo EXE", BLUE);
+        LinearLayout.LayoutParams chooseParams = lp(-1, dp(48));
+        chooseParams.setMargins(0, dp(12), 0, dp(7));
+        panel.addView(choose, chooseParams);
+        choose.setOnClickListener(v -> { dialogHolder[0].dismiss(); openPicker(); });
+
+        Button install = button("↓   Instalar paquete del motor", Color.rgb(67, 87, 132));
+        panel.addView(install, lp(-1, dp(46)));
+        install.setOnClickListener(v -> { dialogHolder[0].dismiss(); openRuntimePicker(); });
+
+        Button run = button("▶   Ejecutar programa seleccionado", Color.rgb(35, 163, 132));
+        LinearLayout.LayoutParams runParams = lp(-1, dp(48));
+        runParams.setMargins(0, dp(7), 0, dp(7));
+        panel.addView(run, runParams);
+        run.setOnClickListener(v -> { dialogHolder[0].dismiss(); attemptRunSelected(); });
+
+        TextView note = label("BLASTER DESKTOP  •  MOTOR WINDOWS EN INTEGRACIÓN", 9, MUTED, true);
+        note.setGravity(Gravity.CENTER);
+        panel.addView(note, lp(-1, dp(32)));
+
+        final android.app.AlertDialog[] dialogHolder = new android.app.AlertDialog[1];
+        dialogHolder[0] = new android.app.AlertDialog.Builder(this)
+            .setView(panel)
+            .setNegativeButton("Cerrar", null)
+            .create();
+        dialog = dialogHolder[0];
+        dialog.show();
     }
 
     private void showPrograms() {
@@ -212,14 +253,18 @@ public class MainActivity extends Activity {
             .setNegativeButton("Cerrar", null).show();
     }
     private void showDiagnostics() {
+        String status = windowsRuntime.getStatus();
         new android.app.AlertDialog.Builder(this)
             .setTitle("Diagnóstico BLASTER")
             .setMessage("Arquitectura Android: " + detectArch()
                 + "\nSelector de archivos: disponible"
                 + "\nEscritorio gráfico: activo"
-                + "\nMotor Windows: no integrado"
-                + "\n\nLa interfaz ya permite elegir archivos, pero aún no ejecutar programas Windows.")
-            .setPositiveButton("Entendido", null).show();
+                + "\nLanzador: " + (windowsRuntime.getLauncher().canExecute() ? "detectado" : "pendiente")
+                + "\nBox64: " + (windowsRuntime.getBox64().canExecute() ? "detectado" : "pendiente")
+                + "\nWine64: " + (windowsRuntime.getWine64().canExecute() ? "detectado" : "pendiente")
+                + "\n\n" + status)
+            .setPositiveButton("Abrir lanzador", (d, w) -> showLauncher())
+            .setNegativeButton("Cerrar", null).show();
     }
     private void showAbout() {
         new android.app.AlertDialog.Builder(this)
