@@ -6,6 +6,7 @@ on:
     paths:
       - "tools/build-runtime/**"
       - ".github/workflows/build-real-runtime.yml"
+      - "app/src/main/java/com/blaster/exeandroid/MainActivity.java"
 
 jobs:
   runtime:
