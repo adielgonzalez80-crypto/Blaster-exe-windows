@@ -22,10 +22,15 @@ if [ ! -x "${WINE64}" ]; then
 fi
 
 export BLASTER_RUNTIME="${RUNTIME}"
-export BOX64_LD_LIBRARY_PATH="${RUNTIME}/rootfs/lib/x86_64-linux-gnu:${RUNTIME}/rootfs/usr/lib/x86_64-linux-gnu:${RUNTIME}/rootfs/lib64"
+export BOX64_LD_LIBRARY_PATH="${RUNTIME}/rootfs/lib/x86_64-linux-gnu:${RUNTIME}/rootfs/usr/lib/x86_64-linux-gnu:${RUNTIME}/rootfs/lib64:${RUNTIME}/rootfs/usr/lib64:${RUNTIME}/wine/usr/local/lib"
+export BOX64_DYNAREC=1
+export BOX64_MMAP32=1
 export WINEPREFIX="${RUNTIME}/prefix"
 export WINEDLLPATH="${RUNTIME}/wine/usr/local/lib/wine/x86_64-windows:${RUNTIME}/wine/usr/local/lib/wine/i386-windows"
 export PATH="${RUNTIME}/wine/usr/local/bin:${PATH:-}"
+export HOME="${RUNTIME}/home"
+export TMPDIR="${RUNTIME}/tmp"
+export WINEARCH=win64
 
 mkdir -p "${WINEPREFIX}"
 
