@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final int PICK_EXE = 1001;
+    private static final int PICK_RUNTIME = 1002;
     private static final int BG = Color.rgb(8, 14, 31);
     private static final int PANEL = Color.rgb(18, 29, 54);
     private static final int PANEL2 = Color.rgb(26, 42, 73);
@@ -113,6 +114,10 @@ public class MainActivity extends Activity {
         inside.addView(selectedFile);
         fileMeta = label("Puedes elegir un archivo desde Descargas o cualquier carpeta accesible.", 11, MUTED, false);
         inside.addView(fileMeta);
+        Button installRuntime = button("⚙   Instalar paquete del motor Windows", Color.rgb(76, 91, 130));
+        installRuntime.setTextSize(12);
+        installRuntime.setOnClickListener(v -> openRuntimePicker());
+        inside.addView(installRuntime, lp(-1, dp(44)));
         Button runExe = button("▶   Intentar ejecutar programa", Color.rgb(35, 163, 132));
         runExe.setOnClickListener(v -> attemptRunSelected());
         LinearLayout.LayoutParams runParams = lp(-1, dp(48));
@@ -173,6 +178,14 @@ public class MainActivity extends Activity {
     }
     private void hideStartMenu() { startOpen = false; startMenu.setVisibility(View.GONE); }
 
+    private void openRuntimePicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("application/zip");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        try { startActivityForResult(intent, PICK_RUNTIME); }
+        catch (Exception e) { Toast.makeText(this, "No se pudo abrir el selector del paquete runtime.", Toast.LENGTH_LONG).show(); }
+    }
+
     private void openPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("*/*");
@@ -207,7 +220,27 @@ public class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != PICK_EXE || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        if (requestCode == PICK_RUNTIME) {
+            Uri runtimeUri = data.getData();
+            runtimeStatus.setText("Instalando paquete del motor Windows…");
+            new Thread(() -> {
+                try {
+                    windowsRuntime.installRuntimePackage(runtimeUri);
+                    runOnUiThread(() -> {
+                        runtimeStatus.setText(windowsRuntime.getStatus());
+                        Toast.makeText(this, "Motor BLASTER instalado.", Toast.LENGTH_LONG).show();
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> new android.app.AlertDialog.Builder(this)
+                        .setTitle("No se pudo instalar el motor")
+                        .setMessage(e.getMessage() == null ? "Paquete runtime inválido." : e.getMessage())
+                        .setPositiveButton("Entendido", null).show());
+                }
+            }).start();
+            return;
+        }
+        if (requestCode != PICK_EXE) return;
         Uri uri = data.getData();
         selectedUri = uri;
         String name = getDisplayName(uri);
