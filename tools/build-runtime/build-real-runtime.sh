@@ -6,7 +6,7 @@ OUT="${ROOT}/dist/blaster-runtime"
 SRC="${ROOT}/.runtime-src"
 JOBS="${JOBS:-$(nproc)}"
 NDK="${ANDROID_NDK_HOME:-}"
-ANDROID_API="${ANDROID_API:-26}"
+ANDROID_API="${ANDROID_API:-28}"
 ABIs="arm64-v8a"
 
 rm -rf "${OUT}" "${SRC}"
@@ -33,8 +33,6 @@ cmake -S "${SRC}/box64" -B "${SRC}/box64/build" \
   -DANDROID=ON \
   -DTERMUX=ON \
   -DARM_DYNAREC=ON \
-  -DBOX32=ON \
-  -DWOW64=ON \
   -DCMAKE_TOOLCHAIN_FILE="${NDK}/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI="${ABIs}" \
   -DANDROID_PLATFORM="android-${ANDROID_API}" \
