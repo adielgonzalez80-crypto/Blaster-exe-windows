@@ -9,19 +9,20 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * BLASTER Windows runtime bridge.
  *
  * Runtime layout:
- *   filesDir/blaster-runtime/
- *       runtime.json
- *       launch-windows
- *       bin/box64
- *       wine/bin/wine64
- *
- * The native runtime itself is deliberately kept outside Java source. It must
- * contain compatible ARM64 Android/Linux binaries and their Wine userspace.
+ * filesDir/blaster-runtime/
+ *   runtime.json
+ *   launch-windows
+ *   bin/box64
+ *   wine/bin/wine64
  */
 public final class WindowsRuntime {
     private final Context context;
@@ -30,25 +31,11 @@ public final class WindowsRuntime {
         this.context = context.getApplicationContext();
     }
 
-    public File getRuntimeRoot() {
-        return new File(context.getFilesDir(), "blaster-runtime");
-    }
-
-    public File getLauncher() {
-        return new File(getRuntimeRoot(), "launch-windows");
-    }
-
-    public File getBox64() {
-        return new File(new File(getRuntimeRoot(), "bin"), "box64");
-    }
-
-    public File getWine64() {
-        return new File(new File(getRuntimeRoot(), "wine/bin"), "wine64");
-    }
-
-    public File getRuntimeManifest() {
-        return new File(getRuntimeRoot(), "runtime.json");
-    }
+    public File getRuntimeRoot() { return new File(context.getFilesDir(), "blaster-runtime"); }
+    public File getLauncher() { return new File(getRuntimeRoot(), "launch-windows"); }
+    public File getBox64() { return new File(new File(getRuntimeRoot(), "bin"), "box64"); }
+    public File getWine64() { return new File(new File(getRuntimeRoot(), "wine/bin"), "wine64"); }
+    public File getRuntimeManifest() { return new File(getRuntimeRoot(), "runtime.json"); }
 
     public boolean isInstalled() {
         return getLauncher().isFile() && getLauncher().canExecute()
@@ -57,9 +44,7 @@ public final class WindowsRuntime {
     }
 
     public String getStatus() {
-        if (isInstalled()) {
-            return "Motor BLASTER detectado: launcher + Box64 + Wine64.";
-        }
+        if (isInstalled()) return "Motor BLASTER detectado: launcher + Box64 + Wine64.";
         StringBuilder missing = new StringBuilder("Motor Windows incompleto. Falta: ");
         boolean first = true;
         if (!getLauncher().isFile()) { missing.append("launcher"); first = false; }
@@ -75,9 +60,7 @@ public final class WindowsRuntime {
         if (!name.toLowerCase().endsWith(".exe")) name += ".exe";
 
         File staging = new File(context.getCacheDir(), "blaster-exe");
-        if (!staging.exists() && !staging.mkdirs()) {
-            throw new IOException("No se pudo crear el directorio temporal.");
-        }
+        if (!staging.exists() && !staging.mkdirs()) throw new IOException("No se pudo crear el directorio temporal.");
 
         File destination = new File(staging, name);
         try (InputStream in = context.getContentResolver().openInputStream(source);
@@ -91,17 +74,79 @@ public final class WindowsRuntime {
     }
 
     /**
-     * Starts the BLASTER launcher. The launcher is responsible for configuring
-     * PATH, WINEPREFIX, Box64 and the Wine libraries.
+     * Installs a BLASTER runtime ZIP supplied by the user or produced by the
+     * runtime preparation workflow. ZIP paths are validated against traversal.
      */
+    public void installRuntimePackage(Uri source) throws IOException {
+        File root = getRuntimeRoot();
+        File parent = root.getParentFile();
+        if (!parent.exists() && !parent.mkdirs()) throw new IOException("No se pudo preparar el almacenamiento.");
+        File temp = new File(parent, "blaster-runtime-installing");
+        deleteTree(temp);
+        if (!temp.mkdirs()) throw new IOException("No se pudo crear el área temporal.");
+
+        try (InputStream raw = context.getContentResolver().openInputStream(source);
+             ZipInputStream zip = new ZipInputStream(new BufferedInputStream(raw))) {
+            if (raw == null) throw new IOException("No se pudo leer el paquete runtime.");
+            ZipEntry entry;
+            byte[] buffer = new byte[32 * 1024];
+            while ((entry = zip.getNextEntry()) != null) {
+                String name = entry.getName().replace('\\', '/');
+                if (name.startsWith("/") || name.contains("../") || name.equals(".."))
+                    throw new IOException("Paquete runtime rechazado: ruta insegura.");
+
+                while (name.startsWith("./")) name = name.substring(2);
+                if (name.isEmpty()) continue;
+
+                File target = new File(temp, name);
+                String rootPath = temp.getCanonicalPath() + File.separator;
+                String targetPath = target.getCanonicalPath();
+                if (!targetPath.startsWith(rootPath)) throw new IOException("Paquete runtime rechazado.");
+
+                if (entry.isDirectory()) {
+                    if (!target.exists() && !target.mkdirs()) throw new IOException("No se pudo crear " + name);
+                    continue;
+                }
+
+                File p = target.getParentFile();
+                if (!p.exists() && !p.mkdirs()) throw new IOException("No se pudo crear " + p);
+                try (FileOutputStream out = new FileOutputStream(target)) {
+                    int read;
+                    while ((read = zip.read(buffer)) != -1) out.write(buffer, 0, read);
+                }
+            }
+        }
+
+        File launcher = new File(temp, "launch-windows");
+        File box64 = new File(temp, "bin/box64");
+        File wine64 = new File(temp, "wine/bin/wine64");
+        if (!launcher.isFile() || !box64.isFile() || !wine64.isFile()) {
+            deleteTree(temp);
+            throw new IOException("El paquete no contiene el runtime requerido: launch-windows, Box64 y Wine64.");
+        }
+
+        launcher.setExecutable(true, false);
+        box64.setExecutable(true, false);
+        wine64.setExecutable(true, false);
+
+        File old = new File(parent, "blaster-runtime-old");
+        deleteTree(old);
+        if (root.exists() && !root.renameTo(old)) {
+            deleteTree(temp);
+            throw new IOException("No se pudo reemplazar el runtime anterior.");
+        }
+        if (!temp.renameTo(root)) {
+            if (old.exists()) old.renameTo(root);
+            deleteTree(temp);
+            throw new IOException("No se pudo activar el nuevo runtime.");
+        }
+        deleteTree(old);
+    }
+
     public Process launch(File exe) throws IOException {
         if (!isInstalled()) throw new IOException(getStatus());
-
         File log = new File(context.getFilesDir(), "blaster-runtime-last.log");
-        ProcessBuilder builder = new ProcessBuilder(
-                getLauncher().getAbsolutePath(),
-                exe.getAbsolutePath()
-        );
+        ProcessBuilder builder = new ProcessBuilder(getLauncher().getAbsolutePath(), exe.getAbsolutePath());
         builder.directory(getRuntimeRoot());
         builder.environment().put("BLASTER_RUNTIME", getRuntimeRoot().getAbsolutePath());
         builder.environment().put("BLASTER_EXE", exe.getAbsolutePath());
@@ -113,10 +158,7 @@ public final class WindowsRuntime {
     private String queryName(Uri uri) {
         Cursor cursor = null;
         try {
-            cursor = context.getContentResolver().query(
-                    uri,
-                    new String[]{OpenableColumns.DISPLAY_NAME},
-                    null, null, null);
+            cursor = context.getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
             if (cursor != null && cursor.moveToFirst()) {
                 int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                 if (index >= 0) return cursor.getString(index);
@@ -126,5 +168,12 @@ public final class WindowsRuntime {
             if (cursor != null) cursor.close();
         }
         return null;
+    }
+
+    private void deleteTree(File file) {
+        if (file == null || !file.exists()) return;
+        File[] children = file.listFiles();
+        if (children != null) for (File child : children) deleteTree(child);
+        file.delete();
     }
 }
