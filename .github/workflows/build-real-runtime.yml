@@ -1,0 +1,46 @@
+name: Build BLASTER real Windows runtime
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/build-runtime/**"
+      - ".github/workflows/build-real-runtime.yml"
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build git pkg-config \
+            gcc-multilib g++-multilib flex bison gettext \
+            python3 perl autoconf automake libtool \
+            libx11-dev libfreetype-dev libfontconfig1-dev \
+            libxext-dev libxrender-dev libxi-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libxfixes-dev \
+            libgl-dev libvulkan-dev debootstrap ca-certificates
+
+      - name: Build source runtime
+        run: |
+          chmod +x tools/build-runtime/build-real-runtime.sh
+          chmod +x tools/build-runtime/launch-windows.real.sh
+          tools/build-runtime/build-real-runtime.sh
+
+      - name: Package runtime
+        run: |
+          cd dist
+          zip -r blaster-windows-runtime-real.zip blaster-runtime
+
+      - name: Upload runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: blaster-windows-runtime-real
+          path: dist/blaster-windows-runtime-real.zip
+          if-no-files-found: error
