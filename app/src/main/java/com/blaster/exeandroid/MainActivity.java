@@ -15,27 +15,24 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-/**
- * BLASTER EXE — first native desktop-style UI pass.
- * This screen provides a real Android file picker and honest runtime status.
- * It does not claim to execute Windows programs until a compatibility runtime is integrated.
- */
 public class MainActivity extends Activity {
     private static final int PICK_EXE = 1001;
-    private static final int BG = Color.rgb(10, 14, 25);
-    private static final int PANEL = Color.rgb(20, 28, 45);
-    private static final int PANEL_LIGHT = Color.rgb(27, 39, 61);
-    private static final int BLUE = Color.rgb(50, 119, 255);
-    private static final int CYAN = Color.rgb(47, 213, 226);
-    private static final int WHITE = Color.rgb(242, 246, 255);
-    private static final int MUTED = Color.rgb(157, 171, 196);
+    private static final int BG = Color.rgb(8, 14, 31);
+    private static final int PANEL = Color.rgb(18, 29, 54);
+    private static final int PANEL2 = Color.rgb(26, 42, 73);
+    private static final int BLUE = Color.rgb(48, 119, 255);
+    private static final int CYAN = Color.rgb(53, 218, 229);
+    private static final int WHITE = Color.rgb(242, 247, 255);
+    private static final int MUTED = Color.rgb(157, 177, 207);
     private TextView selectedFile;
     private TextView fileMeta;
     private TextView runtimeStatus;
+    private LinearLayout root;
+    private LinearLayout startMenu;
+    private boolean startOpen = false;
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
         getWindow().getDecorView().setSystemUiVisibility(0);
@@ -43,133 +40,166 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(BG);
+        root = column();
+        root.setPadding(dp(16), dp(14), dp(16), dp(12));
+        scroll.addView(root);
 
-        LinearLayout page = new LinearLayout(this);
-        page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(20), dp(18), dp(20), dp(24));
-        scroll.addView(page);
+        // BLASTER desktop header
+        LinearLayout top = row();
+        TextView logo = label("B", 23, WHITE, true);
+        logo.setGravity(Gravity.CENTER);
+        logo.setBackground(round(BLUE, 14));
+        top.addView(logo, lp(dp(48), dp(48)));
+        LinearLayout names = column();
+        names.setPadding(dp(10), 0, 0, 0);
+        names.addView(label("BLASTER EXE", 19, WHITE, true));
+        names.addView(label("ESCRITORIO DIGITAL", 10, CYAN, true));
+        top.addView(names, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView badge = label("BETA", 10, WHITE, true);
+        badge.setGravity(Gravity.CENTER);
+        badge.setPadding(dp(10), dp(7), dp(10), dp(7));
+        badge.setBackground(round(Color.rgb(42, 64, 105), 24));
+        top.addView(badge);
+        root.addView(top, lp(-1, -2));
+        root.addView(label("Tu espacio. Tus herramientas. Tu identidad.", 13, MUTED, false), lp(-1, dp(38)));
 
-        // Brand header
-        LinearLayout header = row();
-        TextView mark = label("B", 26, WHITE, true);
-        mark.setGravity(Gravity.CENTER);
-        mark.setBackground(round(BLUE, 16));
-        header.addView(mark, new LinearLayout.LayoutParams(dp(54), dp(54)));
+        // Desktop icons
+        root.addView(sectionTitle("APLICACIONES"), lp(-1, dp(28)));
+        LinearLayout icons = row();
+        icons.addView(desktopIcon("▤", "Archivos", v -> openPicker()), weighted());
+        icons.addView(desktopIcon("EXE", "Programas", v -> showPrograms()), weighted());
+        icons.addView(desktopIcon("⚙", "Diagnóstico", v -> showDiagnostics()), weighted());
+        icons.addView(desktopIcon("i", "Acerca de", v -> showAbout()), weighted());
+        root.addView(icons, lp(-1, dp(112)));
 
-        LinearLayout brand = column();
-        brand.setPadding(dp(12), 0, 0, 0);
-        brand.addView(label("BLASTER", 22, WHITE, true));
-        brand.addView(label("EXE  /  ANDROID DESKTOP", 11, CYAN, true));
-        header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView version = label("BETA", 11, WHITE, true);
-        version.setGravity(Gravity.CENTER);
-        version.setPadding(dp(12), dp(7), dp(12), dp(7));
-        version.setBackground(round(Color.rgb(41, 64, 105), 30));
-        header.addView(version);
-        page.addView(header, params(-1, -2, 0, 0, 0, 22));
+        // Main desktop window
+        LinearLayout window = column();
+        window.setBackground(round(PANEL, 20));
+        window.setClipToOutline(true);
+        LinearLayout titleBar = row();
+        titleBar.setGravity(Gravity.CENTER_VERTICAL);
+        titleBar.setPadding(dp(15), dp(12), dp(12), dp(12));
+        titleBar.setBackground(round(PANEL2, 18));
+        TextView windowTitle = label("⌘   CENTRO DE ARCHIVOS", 12, WHITE, true);
+        titleBar.addView(windowTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView live = label("● EN LÍNEA", 10, CYAN, true);
+        titleBar.addView(live);
+        window.addView(titleBar, lp(-1, dp(48)));
 
-        // Welcome panel
-        LinearLayout hero = column();
-        hero.setPadding(dp(20), dp(22), dp(20), dp(22));
-        hero.setBackground(round(PANEL_LIGHT, 22));
-        TextView eyebrow = label("TU ESPACIO DIGITAL", 11, CYAN, true);
-        hero.addView(eyebrow);
-        TextView headline = label("Un nuevo entorno.\nUna identidad propia.", 27, WHITE, true);
-        headline.setPadding(0, dp(10), 0, dp(8));
-        hero.addView(headline);
-        TextView sub = label("Administra tus archivos y prepara el entorno para programas Windows compatibles.", 14, MUTED, false);
-        hero.addView(sub);
-        page.addView(hero, params(-1, -2, 0, 0, 0, 20));
+        LinearLayout inside = column();
+        inside.setPadding(dp(16), dp(18), dp(16), dp(18));
+        TextView hero = label("Bienvenido a BLASTER", 23, WHITE, true);
+        inside.addView(hero);
+        TextView desc = label("Un escritorio Android con herramientas para organizar y preparar tus programas.", 13, MUTED, false);
+        desc.setPadding(0, dp(7), 0, dp(16));
+        inside.addView(desc);
 
-        page.addView(sectionTitle("CENTRO DE ARCHIVOS"));
-        LinearLayout fileCard = column();
-        fileCard.setPadding(dp(17), dp(17), dp(17), dp(17));
-        fileCard.setBackground(round(PANEL, 18));
+        Button pick = button("＋   Seleccionar archivo EXE", BLUE);
+        inside.addView(pick, lp(-1, dp(50)));
+        pick.setOnClickListener(v -> openPicker());
 
-        TextView fileIcon = label("EXE", 16, CYAN, true);
-        fileIcon.setGravity(Gravity.CENTER);
-        fileIcon.setBackground(round(Color.rgb(22, 55, 79), 12));
-        fileCard.addView(fileIcon, params(dp(58), dp(48), 0, 0, 0, 12));
-
-        fileCard.addView(label("Selecciona un programa", 18, WHITE, true));
-        TextView hint = label("Elige un archivo .exe desde Descargas o desde otra carpeta accesible.", 13, MUTED, false);
-        hint.setPadding(0, dp(6), 0, dp(14));
-        fileCard.addView(hint);
-
-        Button pick = actionButton("＋   Seleccionar archivo EXE", BLUE);
-        fileCard.addView(pick, params(-1, dp(52), 0, 0, 0, 12));
         selectedFile = label("Ningún archivo seleccionado", 13, WHITE, true);
-        fileCard.addView(selectedFile);
-        fileMeta = label("La arquitectura del archivo se comprobará cuando sea posible.", 12, MUTED, false);
-        fileMeta.setPadding(0, dp(5), 0, 0);
-        fileCard.addView(fileMeta);
-        page.addView(fileCard, params(-1, -2, 0, 0, 0, 20));
+        selectedFile.setPadding(0, dp(14), 0, dp(3));
+        inside.addView(selectedFile);
+        fileMeta = label("Puedes elegir un archivo desde Descargas o cualquier carpeta accesible.", 11, MUTED, false);
+        inside.addView(fileMeta);
 
-        // System overview
-        page.addView(sectionTitle("ESTADO DEL SISTEMA"));
-        LinearLayout statusCard = column();
-        statusCard.setPadding(dp(17), dp(16), dp(17), dp(16));
-        statusCard.setBackground(round(PANEL, 18));
-        addStatusRow(statusCard, "Arquitectura Android", detectArch(), CYAN);
-        addDivider(statusCard);
-        addStatusRow(statusCard, "Entorno Windows", "Pendiente de integrar", Color.rgb(255, 193, 89));
-        addDivider(statusCard);
-        runtimeStatus = label("El selector de archivos está disponible. El motor de compatibilidad todavía no está integrado.", 12, MUTED, false);
-        runtimeStatus.setPadding(0, dp(12), 0, 0);
-        statusCard.addView(runtimeStatus);
-        page.addView(statusCard, params(-1, -2, 0, 0, 0, 20));
+        View divider = new View(this);
+        divider.setBackgroundColor(Color.rgb(45, 62, 91));
+        inside.addView(divider, lp(-1, dp(1)));
+        TextView systemTitle = sectionTitle("ESTADO DEL SISTEMA");
+        systemTitle.setPadding(0, dp(15), 0, dp(8));
+        inside.addView(systemTitle);
+        addStatus(inside, "Arquitectura Android", detectArch(), CYAN);
+        addStatus(inside, "Motor Windows", "No integrado", Color.rgb(255, 194, 92));
+        runtimeStatus = label("Seleccionar un EXE no lo ejecuta por sí solo. Se necesita integrar y configurar un motor compatible.", 11, MUTED, false);
+        runtimeStatus.setPadding(0, dp(10), 0, 0);
+        inside.addView(runtimeStatus);
+        window.addView(inside);
+        root.addView(window, lp(-1, -2));
 
-        // Useful actions
-        page.addView(sectionTitle("HERRAMIENTAS BLASTER"));
-        LinearLayout tools = row();
-        tools.addView(toolTile("▤", "Mis archivos", "Buscar archivos", v -> openPicker()), new LinearLayout.LayoutParams(0, dp(112), 1));
-        View gap = new View(this);
-        tools.addView(gap, new LinearLayout.LayoutParams(dp(10), 1));
-        tools.addView(toolTile("⚙", "Diagnóstico", "Ver estado", v -> showDiagnostics()), new LinearLayout.LayoutParams(0, dp(112), 1));
-        page.addView(tools);
+        // Taskbar-style controls
+        root.addView(label("BARRA DE TAREAS", 10, MUTED, true), lp(-1, dp(32)));
+        LinearLayout dock = row();
+        dock.setGravity(Gravity.CENTER_VERTICAL);
+        dock.setPadding(dp(8), dp(7), dp(8), dp(7));
+        dock.setBackground(round(Color.rgb(22, 34, 59), 18));
+        Button start = button("⊞  Inicio", BLUE);
+        start.setTextSize(12);
+        dock.addView(start, lp(dp(108), dp(43)));
+        start.setOnClickListener(v -> toggleStartMenu());
+        TextView running = label("BLASTER DESKTOP  •  ACTIVO", 10, MUTED, true);
+        running.setGravity(Gravity.CENTER);
+        dock.addView(running, new LinearLayout.LayoutParams(0, dp(43), 1));
+        TextView clock = label("●", 15, CYAN, true);
+        clock.setGravity(Gravity.CENTER);
+        dock.addView(clock, lp(dp(30), dp(43)));
+        root.addView(dock, lp(-1, -2));
 
-        TextView footer = label("BLASTER EXE  •  Construido para Android", 11, MUTED, false);
+        startMenu = column();
+        startMenu.setPadding(dp(16), dp(14), dp(16), dp(14));
+        startMenu.setBackground(round(Color.rgb(24, 38, 65), 18));
+        startMenu.setVisibility(View.GONE);
+        startMenu.addView(label("MENÚ BLASTER", 14, WHITE, true), lp(-1, dp(30)));
+        addMenuItem(startMenu, "▤   Abrir archivos", v -> { hideStartMenu(); openPicker(); });
+        addMenuItem(startMenu, "⚙   Diagnóstico del sistema", v -> { hideStartMenu(); showDiagnostics(); });
+        addMenuItem(startMenu, "ⓘ   Acerca de BLASTER", v -> { hideStartMenu(); showAbout(); });
+        root.addView(startMenu, lp(-1, -2));
+
+        TextView footer = label("BLASTER EXE  •  INTERFAZ DE ESCRITORIO EN DESARROLLO", 9, MUTED, false);
         footer.setGravity(Gravity.CENTER);
-        page.addView(footer, params(-1, -2, 0, dp(24), 0, 0));
-
+        root.addView(footer, lp(-1, dp(42)));
         setContentView(scroll);
     }
+
+    private void toggleStartMenu() {
+        startOpen = !startOpen;
+        startMenu.setVisibility(startOpen ? View.VISIBLE : View.GONE);
+    }
+    private void hideStartMenu() { startOpen = false; startMenu.setVisibility(View.GONE); }
 
     private void openPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        try {
-            startActivityForResult(intent, PICK_EXE);
-        } catch (Exception e) {
-            Toast.makeText(this, "No se pudo abrir el selector de archivos.", Toast.LENGTH_LONG).show();
-        }
+        try { startActivityForResult(intent, PICK_EXE); }
+        catch (Exception e) { Toast.makeText(this, "No se pudo abrir el selector de archivos.", Toast.LENGTH_LONG).show(); }
     }
 
-    private void showDiagnostics() {
-        String message = "Android: " + detectArch()
-                + "\nSelector de archivos: disponible"
-                + "\nMotor Windows: no integrado todavía"
-                + "\n\nElegir un EXE no significa que Android pueda ejecutarlo. Se necesita un runtime compatible.";
+    private void showPrograms() {
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Diagnóstico BLASTER")
-                .setMessage(message)
-                .setPositiveButton("Entendido", null)
-                .show();
+            .setTitle("Programas")
+            .setMessage("Aquí aparecerán los programas seleccionados y el estado de compatibilidad. El motor Windows todavía debe integrarse.")
+            .setPositiveButton("Seleccionar EXE", (d, w) -> openPicker())
+            .setNegativeButton("Cerrar", null).show();
+    }
+    private void showDiagnostics() {
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Diagnóstico BLASTER")
+            .setMessage("Arquitectura Android: " + detectArch()
+                + "\nSelector de archivos: disponible"
+                + "\nEscritorio gráfico: activo"
+                + "\nMotor Windows: no integrado"
+                + "\n\nLa interfaz ya permite elegir archivos, pero aún no ejecutar programas Windows.")
+            .setPositiveButton("Entendido", null).show();
+    }
+    private void showAbout() {
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("BLASTER EXE")
+            .setMessage("Un entorno Android con identidad propia, diseñado para evolucionar hacia un escritorio de aplicaciones y compatibilidad Windows.")
+            .setPositiveButton("Cerrar", null).show();
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != PICK_EXE || resultCode != RESULT_OK || data == null || data.getData() == null) return;
-
         Uri uri = data.getData();
         String name = getDisplayName(uri);
         if (name == null || name.trim().isEmpty()) name = uri.getLastPathSegment();
-        selectedFile.setText("Archivo: " + (name == null ? "seleccionado" : name));
-        fileMeta.setText("Ubicación: " + uri + "\nArchivo seleccionado; ejecución aún no disponible.");
-        runtimeStatus.setText("Archivo cargado en la interfaz. Para ejecutarlo falta integrar el motor de compatibilidad Windows.");
-        Toast.makeText(this, "Archivo seleccionado correctamente", Toast.LENGTH_SHORT).show();
+        selectedFile.setText("Archivo seleccionado: " + (name == null ? "EXE" : name));
+        fileMeta.setText("Ubicación: " + uri);
+        runtimeStatus.setText("Archivo elegido. La ejecución estará disponible cuando se integre un motor de compatibilidad Windows.");
+        Toast.makeText(this, "Archivo seleccionado", Toast.LENGTH_SHORT).show();
     }
 
     private String getDisplayName(Uri uri) {
@@ -181,104 +211,69 @@ public class MainActivity extends Activity {
                 if (index >= 0) return cursor.getString(index);
             }
         } catch (Exception ignored) {
-        } finally {
-            if (cursor != null) cursor.close();
-        }
+        } finally { if (cursor != null) cursor.close(); }
         return null;
     }
-
     private String detectArch() {
         String[] abis = android.os.Build.SUPPORTED_ABIS;
         return abis != null && abis.length > 0 ? abis[0] : "Desconocida";
     }
-
-    private void addStatusRow(LinearLayout parent, String title, String value, int valueColor) {
-        LinearLayout r = row();
-        r.setGravity(Gravity.CENTER_VERTICAL);
-        TextView left = label(title, 13, MUTED, false);
-        r.addView(left, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView right = label(value, 12, valueColor, true);
+    private void addStatus(LinearLayout parent, String title, String value, int color) {
+        LinearLayout line = row();
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        TextView left = label(title, 12, MUTED, false);
+        line.addView(left, new LinearLayout.LayoutParams(0, dp(32), 1));
+        TextView right = label(value, 11, color, true);
         right.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        r.addView(right);
-        parent.addView(r, params(-1, dp(34), 0, 0, 0, 0));
+        line.addView(right);
+        parent.addView(line, lp(-1, dp(32)));
     }
-
-    private void addDivider(LinearLayout parent) {
-        View line = new View(this);
-        line.setBackgroundColor(Color.rgb(42, 54, 75));
-        parent.addView(line, params(-1, dp(1), 0, dp(3), 0, dp(3)));
+    private View desktopIcon(String symbol, String title, View.OnClickListener action) {
+        LinearLayout icon = column();
+        icon.setGravity(Gravity.CENTER);
+        TextView tile = label(symbol, symbol.length() > 2 ? 13 : 23, WHITE, true);
+        tile.setGravity(Gravity.CENTER);
+        tile.setBackground(round(Color.rgb(32, 57, 99), 15));
+        icon.addView(tile, lp(dp(54), dp(54)));
+        TextView name = label(title, 10, WHITE, true);
+        name.setGravity(Gravity.CENTER);
+        name.setPadding(0, dp(6), 0, 0);
+        icon.addView(name, lp(-1, dp(26)));
+        icon.setOnClickListener(action);
+        return icon;
     }
-
+    private void addMenuItem(LinearLayout menu, String text, View.OnClickListener action) {
+        TextView item = label(text, 13, WHITE, true);
+        item.setPadding(dp(10), 0, dp(10), 0);
+        menu.addView(item, lp(-1, dp(44)));
+        item.setOnClickListener(action);
+    }
     private TextView sectionTitle(String text) {
-        TextView t = label(text, 12, MUTED, true);
-        t.setLetterSpacing(0.08f);
-        t.setPadding(dp(2), 0, 0, dp(10));
+        TextView t = label(text, 10, MUTED, true);
+        t.setLetterSpacing(0.09f);
         return t;
     }
-
-    private View toolTile(String icon, String title, String subtitle, View.OnClickListener click) {
-        LinearLayout tile = column();
-        tile.setGravity(Gravity.CENTER_VERTICAL);
-        tile.setPadding(dp(14), dp(12), dp(12), dp(12));
-        tile.setBackground(round(PANEL, 16));
-        TextView glyph = label(icon, 22, CYAN, true);
-        tile.addView(glyph);
-        TextView titleView = label(title, 14, WHITE, true);
-        titleView.setPadding(0, dp(6), 0, dp(3));
-        tile.addView(titleView);
-        tile.addView(label(subtitle, 11, MUTED, false));
-        tile.setOnClickListener(click);
-        return tile;
+    private Button button(String text, int color) {
+        Button b = new Button(this);
+        b.setText(text); b.setTextColor(WHITE); b.setTextSize(14);
+        b.setAllCaps(false); b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        b.setBackground(round(color, 13));
+        b.setPadding(dp(8), 0, dp(8), 0);
+        return b;
     }
-
-    private Button actionButton(String text, int color) {
-        Button button = new Button(this);
-        button.setText(text);
-        button.setTextColor(Color.WHITE);
-        button.setTextSize(14);
-        button.setAllCaps(false);
-        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        button.setBackground(round(color, 14));
-        button.setPadding(dp(12), 0, dp(12), 0);
-        return button;
-    }
-
     private TextView label(String text, float size, int color, boolean bold) {
         TextView t = new TextView(this);
-        t.setText(text);
-        t.setTextSize(size);
-        t.setTextColor(color);
+        t.setText(text); t.setTextSize(size); t.setTextColor(color);
         t.setGravity(Gravity.CENTER_VERTICAL);
         if (bold) t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         return t;
     }
-
-    private LinearLayout row() {
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.HORIZONTAL);
-        return l;
-    }
-
-    private LinearLayout column() {
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.VERTICAL);
-        return l;
-    }
-
+    private LinearLayout row() { LinearLayout l = new LinearLayout(this); l.setOrientation(LinearLayout.HORIZONTAL); return l; }
+    private LinearLayout column() { LinearLayout l = new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); return l; }
     private GradientDrawable round(int color, int radius) {
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
-        d.setCornerRadius(dp(radius));
-        return d;
+        GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius)); return d;
     }
-
-    private LinearLayout.LayoutParams params(int width, int height, int left, int top, int right, int bottom) {
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(width, height);
-        p.setMargins(left, top, right, bottom);
-        return p;
-    }
-
-    private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
-    }
+    private LinearLayout.LayoutParams lp(int w, int h) { return new LinearLayout.LayoutParams(w, h); }
+    private LinearLayout.LayoutParams weighted() { return new LinearLayout.LayoutParams(0, -1, 1); }
+    private int dp(int value) { return (int)(value * getResources().getDisplayMetrics().density + 0.5f); }
 }
