@@ -45,8 +45,14 @@ jobs:
 
       - name: Package runtime
         run: |
-          cd dist
-          zip -r blaster-windows-runtime-real.zip blaster-runtime
+          cd dist/blaster-runtime
+          zip -r ../blaster-windows-runtime-real.zip .
+          cd ..
+          unzip -l blaster-windows-runtime-real.zip
+          unzip -Z1 blaster-windows-runtime-real.zip | grep -Fx "launch-windows"
+          unzip -Z1 blaster-windows-runtime-real.zip | grep -Fx "bin/box64"
+          unzip -Z1 blaster-windows-runtime-real.zip | grep -Fx "wine/usr/local/bin/wine64"
+          unzip -Z1 blaster-windows-runtime-real.zip | grep -Fx "runtime.json"
 
       - name: Upload runtime
         uses: actions/upload-artifact@v4
