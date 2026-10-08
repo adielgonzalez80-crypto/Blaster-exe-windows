@@ -1,0 +1,23 @@
+name: BLASTER Runtime Package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Explain native runtime requirement
+        run: |
+          echo "BLASTER runtime packaging is intentionally gated."
+          echo "A real package requires tested Wine64 + Box64 ARM64 binaries."
+          echo "This workflow does not download arbitrary prebuilt binaries."
+
+      - name: Validate packaging script
+        run: |
+          test -f tools/build-runtime/build-runtime.sh
+          test -f tools/build-runtime/launch-windows.template.sh
+          bash -n tools/build-runtime/build-runtime.sh
+          bash -n tools/build-runtime/launch-windows.template.sh
