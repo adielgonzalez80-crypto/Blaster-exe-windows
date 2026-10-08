@@ -33,6 +33,10 @@ jobs:
             libxinerama-dev libxcursor-dev libxfixes-dev \
             libgl-dev libvulkan-dev debootstrap ca-certificates
 
+      - name: Verify Android NDK
+        run: |
+          test -x "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+
       - name: Build source runtime
         run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
