@@ -33,6 +33,9 @@ cmake -S "${SRC}/box64" -B "${SRC}/box64/build" \
   -DANDROID=ON \
   -DTERMUX=ON \
   -DARM_DYNAREC=ON \
+  -DBOX32=OFF \
+  -DWOW64=OFF \
+  -DCMAKE_C_FLAGS=-D_GNU_SOURCE \
   -DCMAKE_TOOLCHAIN_FILE="${NDK}/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI="${ABIs}" \
   -DANDROID_PLATFORM="android-${ANDROID_API}" \
