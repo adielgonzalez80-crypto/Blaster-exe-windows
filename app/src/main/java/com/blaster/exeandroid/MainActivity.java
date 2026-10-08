@@ -28,12 +28,14 @@ public class MainActivity extends Activity {
     private TextView fileMeta;
     private TextView runtimeStatus;
     private Uri selectedUri;
+    private WindowsRuntime windowsRuntime;
     private LinearLayout root;
     private LinearLayout startMenu;
     private boolean startOpen = false;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        windowsRuntime = new WindowsRuntime(this);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
         getWindow().getDecorView().setSystemUiVisibility(0);
@@ -124,8 +126,8 @@ public class MainActivity extends Activity {
         systemTitle.setPadding(0, dp(15), 0, dp(8));
         inside.addView(systemTitle);
         addStatus(inside, "Arquitectura Android", detectArch(), CYAN);
-        addStatus(inside, "Motor Windows", "No integrado", Color.rgb(255, 194, 92));
-        runtimeStatus = label("Seleccionar un EXE no lo ejecuta por sí solo. Se necesita integrar y configurar un motor compatible.", 11, MUTED, false);
+        addStatus(inside, "Motor Windows", windowsRuntime.isInstalled() ? "Puente detectado" : "No instalado", windowsRuntime.isInstalled() ? CYAN : Color.rgb(255, 194, 92));
+        runtimeStatus = label(windowsRuntime.getStatus(), 11, MUTED, false);
         runtimeStatus.setPadding(0, dp(10), 0, 0);
         inside.addView(runtimeStatus);
         window.addView(inside);
@@ -212,7 +214,7 @@ public class MainActivity extends Activity {
         if (name == null || name.trim().isEmpty()) name = uri.getLastPathSegment();
         selectedFile.setText("Archivo seleccionado: " + (name == null ? "EXE" : name));
         fileMeta.setText("Ubicación: " + uri);
-        runtimeStatus.setText("Archivo elegido. La ejecución estará disponible cuando se integre un motor de compatibilidad Windows.");
+        runtimeStatus.setText("Archivo seleccionado. " + windowsRuntime.getStatus());
         Toast.makeText(this, "Archivo seleccionado", Toast.LENGTH_SHORT).show();
     }
 
@@ -225,12 +227,36 @@ public class MainActivity extends Activity {
                 .setNegativeButton("Cancelar", null).show();
             return;
         }
-        new android.app.AlertDialog.Builder(this)
-            .setTitle("Motor Windows no disponible")
-            .setMessage("BLASTER ha guardado el archivo, pero esta versión todavía no contiene Wine/Box64 ni otro motor de compatibilidad. Por seguridad, no se simula una ejecución.\n\nEl siguiente paso técnico es integrar un runtime compatible con Android ARM64 y comprobar qué programas puede ejecutar.")
-            .setPositiveButton("Entendido", null)
-            .setNeutralButton("Ver diagnóstico", (d, w) -> showDiagnostics())
-            .show();
+        if (!windowsRuntime.isInstalled()) {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Falta instalar el motor Windows")
+                .setMessage("BLASTER puede seleccionar el archivo, pero todavía no incluye Wine/Box64 ni las bibliotecas del runtime. No se ha ejecutado el EXE.\n\nPuedes revisar Winlator, un proyecto Android que integra Wine y Box64. Esta descarga es externa y no instala automáticamente el motor dentro de BLASTER.")
+                .setPositiveButton("Ver Winlator", (d, w) -> {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/brunodev85/winlator/releases"))); }
+                    catch (Exception e) { Toast.makeText(this, "Abre github.com/brunodev85/winlator/releases en tu navegador.", Toast.LENGTH_LONG).show(); }
+                })
+                .setNegativeButton("Cancelar", null)
+                .setNeutralButton("Diagnóstico", (d, w) -> showDiagnostics())
+                .show();
+            return;
+        }
+        final Uri uri = selectedUri;
+        runtimeStatus.setText("Preparando archivo para el runtime…");
+        new Thread(() -> {
+            try {
+                java.io.File staged = windowsRuntime.stageExe(uri);
+                windowsRuntime.launch(staged);
+                runOnUiThread(() -> {
+                    runtimeStatus.setText("Se envió el archivo al puente de ejecución. Comprueba el registro si el programa no abre.");
+                    Toast.makeText(this, "Solicitud de ejecución enviada", Toast.LENGTH_LONG).show();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> new android.app.AlertDialog.Builder(this)
+                    .setTitle("No se pudo iniciar el programa")
+                    .setMessage(e.getMessage() == null ? "Error desconocido del runtime." : e.getMessage())
+                    .setPositiveButton("Entendido", null).show());
+            }
+        }).start();
     }
 
     private String getDisplayName(Uri uri) {
