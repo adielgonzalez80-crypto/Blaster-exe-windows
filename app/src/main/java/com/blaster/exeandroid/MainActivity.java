@@ -27,6 +27,7 @@ public class MainActivity extends Activity {
     private TextView selectedFile;
     private TextView fileMeta;
     private TextView runtimeStatus;
+    private Uri selectedUri;
     private LinearLayout root;
     private LinearLayout startMenu;
     private boolean startOpen = false;
@@ -62,6 +63,11 @@ public class MainActivity extends Activity {
         top.addView(badge);
         root.addView(top, lp(-1, -2));
         root.addView(label("Tu espacio. Tus herramientas. Tu identidad.", 13, MUTED, false), lp(-1, dp(38)));
+        TextView search = label("⌕   Buscar aplicaciones y archivos", 13, MUTED, false);
+        search.setPadding(dp(14), 0, dp(14), 0);
+        search.setBackground(round(Color.rgb(20, 31, 54), 13));
+        root.addView(search, lp(-1, dp(44)));
+        search.setOnClickListener(v -> showPrograms());
 
         // Desktop icons
         root.addView(sectionTitle("APLICACIONES"), lp(-1, dp(28)));
@@ -82,8 +88,10 @@ public class MainActivity extends Activity {
         titleBar.setBackground(round(PANEL2, 18));
         TextView windowTitle = label("⌘   CENTRO DE ARCHIVOS", 12, WHITE, true);
         titleBar.addView(windowTitle, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView live = label("● EN LÍNEA", 10, CYAN, true);
+        TextView live = label("● ACTIVO", 10, CYAN, true);
         titleBar.addView(live);
+        TextView controls = label("   −   □   ×", 11, MUTED, true);
+        titleBar.addView(controls);
         window.addView(titleBar, lp(-1, dp(48)));
 
         LinearLayout inside = column();
@@ -103,6 +111,11 @@ public class MainActivity extends Activity {
         inside.addView(selectedFile);
         fileMeta = label("Puedes elegir un archivo desde Descargas o cualquier carpeta accesible.", 11, MUTED, false);
         inside.addView(fileMeta);
+        Button runExe = button("▶   Intentar ejecutar programa", Color.rgb(35, 163, 132));
+        runExe.setOnClickListener(v -> attemptRunSelected());
+        LinearLayout.LayoutParams runParams = lp(-1, dp(48));
+        runParams.setMargins(0, dp(12), 0, dp(14));
+        inside.addView(runExe, runParams);
 
         View divider = new View(this);
         divider.setBackgroundColor(Color.rgb(45, 62, 91));
@@ -194,12 +207,30 @@ public class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != PICK_EXE || resultCode != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
+        selectedUri = uri;
         String name = getDisplayName(uri);
         if (name == null || name.trim().isEmpty()) name = uri.getLastPathSegment();
         selectedFile.setText("Archivo seleccionado: " + (name == null ? "EXE" : name));
         fileMeta.setText("Ubicación: " + uri);
         runtimeStatus.setText("Archivo elegido. La ejecución estará disponible cuando se integre un motor de compatibilidad Windows.");
         Toast.makeText(this, "Archivo seleccionado", Toast.LENGTH_SHORT).show();
+    }
+
+    private void attemptRunSelected() {
+        if (selectedUri == null) {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("No hay programa seleccionado")
+                .setMessage("Primero pulsa «Seleccionar archivo EXE» y elige el archivo que quieres probar.")
+                .setPositiveButton("Seleccionar archivo", (d, w) -> openPicker())
+                .setNegativeButton("Cancelar", null).show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Motor Windows no disponible")
+            .setMessage("BLASTER ha guardado el archivo, pero esta versión todavía no contiene Wine/Box64 ni otro motor de compatibilidad. Por seguridad, no se simula una ejecución.\n\nEl siguiente paso técnico es integrar un runtime compatible con Android ARM64 y comprobar qué programas puede ejecutar.")
+            .setPositiveButton("Entendido", null)
+            .setNeutralButton("Ver diagnóstico", (d, w) -> showDiagnostics())
+            .show();
     }
 
     private String getDisplayName(Uri uri) {
