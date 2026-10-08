@@ -196,7 +196,7 @@ public class MainActivity extends Activity {
     }
 
     private void showLauncher() {
-        android.app.AlertDialog dialog;
+        final android.app.AlertDialog[] dialogHolder = new android.app.AlertDialog[1];
         LinearLayout panel = column();
         panel.setPadding(dp(18), dp(8), dp(18), dp(8));
         panel.setBackground(round(BG, 18));
@@ -236,13 +236,11 @@ public class MainActivity extends Activity {
         note.setGravity(Gravity.CENTER);
         panel.addView(note, lp(-1, dp(32)));
 
-        final android.app.AlertDialog[] dialogHolder = new android.app.AlertDialog[1];
         dialogHolder[0] = new android.app.AlertDialog.Builder(this)
             .setView(panel)
             .setNegativeButton("Cerrar", null)
             .create();
-        dialog = dialogHolder[0];
-        dialog.show();
+        dialogHolder[0].show();
     }
 
     private void showPrograms() {
