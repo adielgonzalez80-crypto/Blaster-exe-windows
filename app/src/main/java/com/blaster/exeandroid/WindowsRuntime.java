@@ -11,12 +11,17 @@ import java.io.InputStream;
 import java.io.IOException;
 
 /**
- * Runtime bridge for BLASTER EXE.
+ * BLASTER Windows runtime bridge.
  *
- * The bridge expects a native launcher produced by the Windows-compatibility
- * runtime build at filesDir/blaster-runtime/launch-windows. That launcher must
- * configure Wine, Box64/Box86 and their libraries; this app does not bundle those
- * components yet.
+ * Runtime layout:
+ *   filesDir/blaster-runtime/
+ *       runtime.json
+ *       launch-windows
+ *       bin/box64
+ *       wine/bin/wine64
+ *
+ * The native runtime itself is deliberately kept outside Java source. It must
+ * contain compatible ARM64 Android/Linux binaries and their Wine userspace.
  */
 public final class WindowsRuntime {
     private final Context context;
@@ -25,34 +30,55 @@ public final class WindowsRuntime {
         this.context = context.getApplicationContext();
     }
 
+    public File getRuntimeRoot() {
+        return new File(context.getFilesDir(), "blaster-runtime");
+    }
+
     public File getLauncher() {
-        return new File(new File(context.getFilesDir(), "blaster-runtime"), "launch-windows");
+        return new File(getRuntimeRoot(), "launch-windows");
+    }
+
+    public File getBox64() {
+        return new File(new File(getRuntimeRoot(), "bin"), "box64");
+    }
+
+    public File getWine64() {
+        return new File(new File(getRuntimeRoot(), "wine/bin"), "wine64");
+    }
+
+    public File getRuntimeManifest() {
+        return new File(getRuntimeRoot(), "runtime.json");
     }
 
     public boolean isInstalled() {
-        File launcher = getLauncher();
-        return launcher.isFile() && launcher.canExecute();
+        return getLauncher().isFile() && getLauncher().canExecute()
+                && getBox64().isFile() && getBox64().canExecute()
+                && getWine64().isFile() && getWine64().canExecute();
     }
 
     public String getStatus() {
         if (isInstalled()) {
-            return "Se encontró el puente de ejecución. La compatibilidad depende de las bibliotecas del runtime.";
+            return "Motor BLASTER detectado: launcher + Box64 + Wine64.";
         }
-        return "Runtime no instalado: falta blaster-runtime/launch-windows y sus componentes Wine/Box64.";
+        StringBuilder missing = new StringBuilder("Motor Windows incompleto. Falta: ");
+        boolean first = true;
+        if (!getLauncher().isFile()) { missing.append("launcher"); first = false; }
+        if (!getBox64().isFile()) { if (!first) missing.append(", "); missing.append("Box64"); first = false; }
+        if (!getWine64().isFile()) { if (!first) missing.append(", "); missing.append("Wine64"); }
+        return missing.toString();
     }
 
     public File stageExe(Uri source) throws IOException {
         String name = queryName(source);
         if (name == null || name.trim().isEmpty()) name = "selected-program.exe";
         name = name.replaceAll("[^A-Za-z0-9._-]", "_");
-        if (!name.toLowerCase().endsWith(".exe")) {
-            name = name + ".exe";
-        }
+        if (!name.toLowerCase().endsWith(".exe")) name += ".exe";
 
         File staging = new File(context.getCacheDir(), "blaster-exe");
         if (!staging.exists() && !staging.mkdirs()) {
             throw new IOException("No se pudo crear el directorio temporal.");
         }
+
         File destination = new File(staging, name);
         try (InputStream in = context.getContentResolver().openInputStream(source);
              FileOutputStream out = new FileOutputStream(destination, false)) {
@@ -65,17 +91,20 @@ public final class WindowsRuntime {
     }
 
     /**
-     * Launches the runtime bridge only when a real executable bridge is installed.
-     * The bridge's stdout/stderr are redirected to a private log for diagnostics.
+     * Starts the BLASTER launcher. The launcher is responsible for configuring
+     * PATH, WINEPREFIX, Box64 and the Wine libraries.
      */
     public Process launch(File exe) throws IOException {
-        File launcher = getLauncher();
-        if (!launcher.isFile() || !launcher.canExecute()) {
-            throw new IOException(getStatus());
-        }
+        if (!isInstalled()) throw new IOException(getStatus());
+
         File log = new File(context.getFilesDir(), "blaster-runtime-last.log");
-        ProcessBuilder builder = new ProcessBuilder(launcher.getAbsolutePath(), exe.getAbsolutePath());
-        builder.directory(launcher.getParentFile());
+        ProcessBuilder builder = new ProcessBuilder(
+                getLauncher().getAbsolutePath(),
+                exe.getAbsolutePath()
+        );
+        builder.directory(getRuntimeRoot());
+        builder.environment().put("BLASTER_RUNTIME", getRuntimeRoot().getAbsolutePath());
+        builder.environment().put("BLASTER_EXE", exe.getAbsolutePath());
         builder.redirectErrorStream(true);
         builder.redirectOutput(ProcessBuilder.Redirect.appendTo(log));
         return builder.start();
@@ -84,8 +113,10 @@ public final class WindowsRuntime {
     private String queryName(Uri uri) {
         Cursor cursor = null;
         try {
-            cursor = context.getContentResolver().query(uri,
-                new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+            cursor = context.getContentResolver().query(
+                    uri,
+                    new String[]{OpenableColumns.DISPLAY_NAME},
+                    null, null, null);
             if (cursor != null && cursor.moveToFirst()) {
                 int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                 if (index >= 0) return cursor.getString(index);
