@@ -1,0 +1,57 @@
+name: Build BLASTER Windows Runtime
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-box64:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git cmake ninja-build python3 unzip
+
+      - name: Install Android NDK
+        uses: android-actions/setup-android@v3
+      - name: Install NDK
+        run: sdkmanager "ndk;27.2.12479018"
+
+      - name: Clone Box64
+        run: git clone --depth 1 https://github.com/ptitSeb/box64.git /tmp/box64
+
+      - name: Configure Box64 for Android ARM64
+        run: |
+          export ANDROID_NDK=$ANDROID_HOME/ndk/27.2.12479018
+          cmake -S /tmp/box64 -B /tmp/box64/build             -G Ninja             -DCMAKE_BUILD_TYPE=Release             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake             -DANDROID_ABI=arm64-v8a             -DANDROID_PLATFORM=26             -DARM_DYNAREC=ON             -DBOX64=ON
+
+      - name: Build Box64
+        run: cmake --build /tmp/box64/build --parallel 2
+
+      - name: Package Box64 artifact
+        run: |
+          mkdir -p runtime/bin
+          find /tmp/box64/build -type f -name box64 -exec cp {} runtime/bin/box64 \;
+          test -x runtime/bin/box64 || test -f runtime/bin/box64
+          chmod +x runtime/bin/box64
+          cp app/src/main/assets/blaster-runtime/runtime.json runtime/runtime.json
+          cd runtime && zip -r ../blaster-box64-only.zip .
+
+      - name: Upload Box64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blaster-box64-arm64
+          path: blaster-box64-only.zip
+
+  runtime-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate runtime contract
+        run: |
+          test -f app/src/main/assets/blaster-runtime/runtime.json
+          test -f tools/build-runtime/README.md
+          echo "BLASTER runtime contract OK."
+          echo "Wine/Wine64 is intentionally not fabricated or downloaded from an unknown binary source."
