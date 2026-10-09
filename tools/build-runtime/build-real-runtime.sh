@@ -105,6 +105,20 @@ sudo apt-get update
 sudo apt-get install -y --no-install-recommends debootstrap ca-certificates
 sudo debootstrap --arch=amd64 --variant=minbase bookworm "${OUT}/rootfs" http://deb.debian.org/debian
 
+# Wine's Unix-side components need their runtime shared libraries inside the
+# guest rootfs. A minbase-only rootfs is not enough to start Wine.
+sudo chroot "${OUT}/rootfs" apt-get update
+sudo chroot "${OUT}/rootfs" apt-get install -y --no-install-recommends \
+  ca-certificates libgcc-s1 libstdc++6 libx11-6 libxext6 libxrender1 \
+  libxrandr2 libxinerama1 libxcursor1 libxi6 libxfixes3 libxcomposite1 \
+  libxdamage1 libxkbcommon0 libfreetype6 libfontconfig1 libasound2 \
+  libdbus-1-3 libgnutls30 libldap-2.5-0 libpulse0 libudev1 \
+  libwayland-client0 libgl1 libvulkan1 libopengl0 libxshmfence1 \
+  libxxf86vm1 libxss1 libxmu6 libxt6 libsm6 libice6 \
+  libgstreamer1.0-0 libgstreamer-plugins-base1.0-0
+sudo chroot "${OUT}/rootfs" apt-get clean
+sudo rm -rf "${OUT}/rootfs/var/lib/apt/lists/"*
+
 echo "[4/5] Instalar launcher"
 install -m 0755 "${ROOT}/tools/build-runtime/launch-windows.real.sh" "${OUT}/launch-windows"
 
