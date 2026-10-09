@@ -12,6 +12,7 @@ shift
 
 BOX64="$RUNTIME/bin/box64"
 WINE64="$RUNTIME/wine/usr/local/bin/wine64"
+[ -x "$WINE64" ] || WINE64="$RUNTIME/wine/usr/local/bin/wine"
 
 [ -x "$BOX64" ] || { echo "BLASTER: falta Box64 ARM64 en $BOX64"; exit 10; }
 [ -x "$WINE64" ] || { echo "BLASTER: falta Wine64 en $WINE64"; exit 11; }
