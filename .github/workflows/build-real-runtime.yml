@@ -49,6 +49,12 @@ jobs:
           chmod +x tools/build-runtime/launch-windows.real.sh
           tools/build-runtime/build-real-runtime.sh
 
+      - name: Normalize runtime file permissions
+        run: |
+          sudo chmod -R a+rX dist/blaster-runtime
+          test -r dist/blaster-runtime/MANIFEST.txt
+          test -x dist/blaster-runtime/bin/box64
+
       - name: Package runtime
         run: |
           cd dist/blaster-runtime
