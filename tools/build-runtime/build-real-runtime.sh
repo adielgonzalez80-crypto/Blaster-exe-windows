@@ -149,6 +149,6 @@ test -x "${OUT}/wine/usr/local/bin/wine64"
 test -x "${OUT}/launch-windows"
 test -f "${OUT}/runtime.json"
 
-find "${OUT}" -type f -print | sort > "${OUT}/MANIFEST.txt"
+sudo find "${OUT}" -type f -print | sort > "${OUT}/MANIFEST.txt"
 du -sh "${OUT}"
 echo "Runtime creado: ${OUT}"
