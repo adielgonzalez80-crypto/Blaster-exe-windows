@@ -7,12 +7,13 @@ on:
       - "tools/build-runtime/**"
       - ".github/workflows/build-real-runtime.yml"
       - "app/src/main/java/com/blaster/exeandroid/MainActivity.java"
+      - "app/src/main/java/com/blaster/exeandroid/WindowsRuntime.java"
 
 jobs:
   runtime:
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -67,3 +68,12 @@ jobs:
           name: blaster-windows-runtime-real
           path: dist/blaster-windows-runtime-real.zip
           if-no-files-found: error
+
+      - name: Publish official runtime release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: runtime-latest
+          name: BLASTER Windows Runtime
+          body: "Paquete oficial del motor BLASTER. Publicado automáticamente después de validar y empaquetar Box64 + Wine."
+          files: dist/blaster-windows-runtime-real.zip
+          make_latest: false
