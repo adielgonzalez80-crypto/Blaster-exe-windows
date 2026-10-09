@@ -78,6 +78,7 @@ git clone --depth 1 https://gitlab.winehq.org/wine/wine.git "${SRC}/wine"
 docker run --rm \
   -v "${SRC}/wine:/src" \
   -v "${OUT}/wine:/out" \
+  -e "JOBS=${JOBS}" \
   -w /src \
   debian:bookworm-slim bash -lc '
     set -e
