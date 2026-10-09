@@ -69,19 +69,36 @@ if [ ! -x "${OUT}/bin/box64" ]; then
   exit 21
 fi
 
-echo "[2/5] Compilar Wine x86_64 WOW64 como guest"
+echo "[2/5] Compilar Wine x86_64 dentro de Debian Bookworm"
 git clone --depth 1 https://gitlab.winehq.org/wine/wine.git "${SRC}/wine"
-cd "${SRC}/wine"
-./configure --enable-win64 --with-xattr
-make -j"${JOBS}"
-make install DESTDIR="${OUT}/wine"
+
+# Build Wine against the same Debian Bookworm glibc family shipped in rootfs.
+# This avoids compiling against Ubuntu's newer glibc and then packaging older
+# Bookworm libraries that may not satisfy Wine's ELF symbol requirements.
+docker run --rm \
+  -v "${SRC}/wine:/src" \
+  -v "${OUT}/wine:/out" \
+  -w /src \
+  debian:bookworm-slim bash -lc '
+    set -e
+    printf "deb-src http://deb.debian.org/debian bookworm main\n" >> /etc/apt/sources.list
+    printf "deb-src http://deb.debian.org/debian bookworm-updates main\n" >> /etc/apt/sources.list
+    printf "deb-src http://security.debian.org/debian-security bookworm-security main\n" >> /etc/apt/sources.list
+    apt-get update
+    apt-get install -y --no-install-recommends build-essential gcc-mingw-w64-x86-64 gcc-mingw-w64-i686 flex bison gettext perl python3 pkg-config ca-certificates
+    apt-get build-dep -y wine
+    ./configure --enable-win64 --with-xattr --prefix=/usr/local
+    make -j"${JOBS}"
+    make install DESTDIR=/out
+    rm -rf /var/lib/apt/lists/*
+  '
 
 if [ ! -x "${OUT}/wine/usr/local/bin/wine64" ]; then
-  echo "ERROR: Wine64 WOW64 no fue generado."
+  echo "ERROR: Wine64 no fue generado en el entorno Debian Bookworm."
   exit 22
 fi
 
-echo "[3/5] Crear rootfs amd64 mínimo para el guest"
+echo "[3/5] Crear rootfs amd64 Debian Bookworm para el guest"
 cd "${ROOT}"
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends debootstrap ca-certificates
