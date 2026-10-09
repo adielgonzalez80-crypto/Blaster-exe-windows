@@ -91,6 +91,7 @@ docker run --rm \
     ./configure --enable-win64 --with-xattr --prefix=/usr/local
     make -j"${JOBS}"
     make install DESTDIR=/out
+    if [ ! -x /out/usr/local/bin/wine64 ] && [ -x /out/usr/local/bin/wine ]; then ln -s wine /out/usr/local/bin/wine64; fi
     rm -rf /var/lib/apt/lists/*
   '
 
@@ -99,9 +100,7 @@ if [ ! -x "${OUT}/wine/usr/local/bin/wine" ] && [ ! -x "${OUT}/wine/usr/local/bi
   find "${OUT}/wine/usr/local/bin" -maxdepth 1 -type f -o -type l || true
   exit 22
 fi
-if [ ! -x "${OUT}/wine/usr/local/bin/wine64" ]; then
-  ln -s wine "${OUT}/wine/usr/local/bin/wine64"
-fi
+# wine64 alias is created inside the build container to avoid root-owned output permission errors.
 
 echo "[3/5] Crear rootfs amd64 Debian Bookworm para el guest"
 cd "${ROOT}"
