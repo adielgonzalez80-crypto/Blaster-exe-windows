@@ -72,8 +72,39 @@ public class MainActivity extends Activity {
         root.addView(search, lp(-1, dp(44)));
         search.setOnClickListener(v -> showPrograms());
 
+        // BLASTER signature dashboard: original desktop identity, not a Windows clone.
+        LinearLayout welcome = column();
+        welcome.setPadding(dp(18), dp(18), dp(18), dp(16));
+        welcome.setBackground(gradient(Color.rgb(28, 66, 124), Color.rgb(18, 29, 57), 22));
+        TextView overline = label("BLASTER SPACE  /  01", 10, CYAN, true);
+        overline.setLetterSpacing(0.12f);
+        welcome.addView(overline, lp(-1, dp(22)));
+        TextView welcomeTitle = label("Tu escritorio.\nTu forma de trabajar.", 25, WHITE, true);
+        welcomeTitle.setGravity(Gravity.CENTER_VERTICAL);
+        welcomeTitle.setPadding(0, dp(4), 0, dp(4));
+        welcome.addView(welcomeTitle, lp(-1, dp(68)));
+        TextView welcomeCopy = label("Abre archivos, organiza tus herramientas y prepara tus programas desde un solo lugar.", 12, Color.rgb(204, 219, 244), false);
+        welcomeCopy.setPadding(0, 0, 0, dp(14));
+        welcome.addView(welcomeCopy, lp(-1, -2));
+
+        LinearLayout quickActions = row();
+        Button quickOpen = button("＋  Abrir EXE", BLUE);
+        quickOpen.setTextSize(12);
+        quickActions.addView(quickOpen, new LinearLayout.LayoutParams(0, dp(43), 1));
+        quickOpen.setOnClickListener(v -> openPicker());
+        View quickGap = new View(this);
+        quickActions.addView(quickGap, lp(dp(8), dp(1)));
+        Button quickApps = button("▦  Aplicaciones", Color.rgb(39, 58, 91));
+        quickApps.setTextSize(12);
+        quickActions.addView(quickApps, new LinearLayout.LayoutParams(0, dp(43), 1));
+        quickApps.setOnClickListener(v -> showPrograms());
+        welcome.addView(quickActions, lp(-1, dp(43)));
+        LinearLayout.LayoutParams welcomeParams = lp(-1, -2);
+        welcomeParams.setMargins(0, dp(12), 0, dp(10));
+        root.addView(welcome, welcomeParams);
+
         // Desktop icons
-        root.addView(sectionTitle("APLICACIONES"), lp(-1, dp(28)));
+        root.addView(sectionTitle("TUS HERRAMIENTAS"), lp(-1, dp(28)));
         LinearLayout icons = row();
         icons.addView(desktopIcon("▤", "Archivos", v -> openPicker()), weighted());
         icons.addView(desktopIcon("EXE", "Programas", v -> showPrograms()), weighted());
@@ -412,6 +443,12 @@ public class MainActivity extends Activity {
     private LinearLayout column() { LinearLayout l = new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); return l; }
     private GradientDrawable round(int color, int radius) {
         GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius)); return d;
+    }
+    private GradientDrawable gradient(int start, int end, int radius) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{start, end});
+        d.setCornerRadius(dp(radius));
+        d.setGradientType(GradientDrawable.LINEAR_GRADIENT);
+        return d;
     }
     private LinearLayout.LayoutParams lp(int w, int h) { return new LinearLayout.LayoutParams(w, h); }
     private LinearLayout.LayoutParams weighted() { return new LinearLayout.LayoutParams(0, -1, 1); }
