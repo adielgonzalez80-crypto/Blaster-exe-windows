@@ -11,6 +11,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -73,6 +75,38 @@ public final class WindowsRuntime {
             while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
         }
         return destination;
+    }
+
+    /** Downloads the package published by the repository runtime workflow and installs it. */
+    public void downloadAndInstallRuntime() throws IOException {
+        String address = "https://github.com/adielgonzalez80-crypto/Blaster-exe-windows/releases/download/runtime-latest/blaster-windows-runtime-real.zip";
+        File packageFile = new File(context.getCacheDir(), "blaster-windows-runtime-real.zip");
+        HttpURLConnection connection = (HttpURLConnection) new URL(address).openConnection();
+        connection.setConnectTimeout(20000);
+        connection.setReadTimeout(60000);
+        connection.setInstanceFollowRedirects(true);
+        connection.setRequestProperty("User-Agent", "BLASTER-EXE-Android");
+        try {
+            int code = connection.getResponseCode();
+            if (code != HttpURLConnection.HTTP_OK) {
+                if (code == HttpURLConnection.HTTP_NOT_FOUND)
+                    throw new IOException("El paquete oficial todavía no está publicado. Espera a que termine la compilación del motor en GitHub Actions.");
+                throw new IOException("No se pudo descargar el motor. HTTP " + code);
+            }
+            try (InputStream in = connection.getInputStream();
+                 FileOutputStream out = new FileOutputStream(packageFile, false)) {
+                byte[] buffer = new byte[64 * 1024];
+                int read;
+                while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            }
+        } finally {
+            connection.disconnect();
+        }
+        try {
+            installRuntimePackage(Uri.fromFile(packageFile));
+        } finally {
+            packageFile.delete();
+        }
     }
 
     /**
