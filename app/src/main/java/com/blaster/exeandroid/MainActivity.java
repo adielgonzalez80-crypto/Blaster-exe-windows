@@ -146,10 +146,16 @@ public class MainActivity extends Activity {
         inside.addView(selectedFile);
         fileMeta = label("Puedes elegir un archivo desde Descargas o cualquier carpeta accesible.", 11, MUTED, false);
         inside.addView(fileMeta);
-        Button installRuntime = button("⚙   Importar paquete del motor BLASTER", Color.rgb(76, 91, 130));
+        Button downloadRuntime = button("↓   Descargar e instalar motor BLASTER", Color.rgb(20, 119, 151));
+        downloadRuntime.setTextSize(12);
+        downloadRuntime.setOnClickListener(v -> downloadRuntimePackage());
+        inside.addView(downloadRuntime, lp(-1, dp(44)));
+        Button installRuntime = button("＋   Instalar ZIP del motor desde el teléfono", Color.rgb(76, 91, 130));
         installRuntime.setTextSize(12);
         installRuntime.setOnClickListener(v -> openRuntimePicker());
-        inside.addView(installRuntime, lp(-1, dp(44)));
+        LinearLayout.LayoutParams importParams = lp(-1, dp(42));
+        importParams.setMargins(0, dp(7), 0, 0);
+        inside.addView(installRuntime, importParams);
         Button runExe = button("▶   Intentar ejecutar programa", Color.rgb(35, 163, 132));
         runExe.setOnClickListener(v -> attemptRunSelected());
         LinearLayout.LayoutParams runParams = lp(-1, dp(48));
@@ -209,6 +215,27 @@ public class MainActivity extends Activity {
         startMenu.setVisibility(startOpen ? View.VISIBLE : View.GONE);
     }
     private void hideStartMenu() { startOpen = false; startMenu.setVisibility(View.GONE); }
+
+    private void downloadRuntimePackage() {
+        if (runtimeStatus != null) runtimeStatus.setText("Conectando con el repositorio oficial de BLASTER…");
+        new Thread(() -> {
+            try {
+                windowsRuntime.downloadAndInstallRuntime();
+                runOnUiThread(() -> {
+                    runtimeStatus.setText(windowsRuntime.getStatus());
+                    Toast.makeText(this, "Paquete del motor descargado e instalado.", Toast.LENGTH_LONG).show();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    runtimeStatus.setText(windowsRuntime.getStatus());
+                    new android.app.AlertDialog.Builder(this)
+                        .setTitle("Motor BLASTER")
+                        .setMessage(e.getMessage() == null ? "No se pudo descargar o instalar el paquete." : e.getMessage())
+                        .setPositiveButton("Entendido", null).show();
+                });
+            }
+        }).start();
+    }
 
     private void openRuntimePicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
