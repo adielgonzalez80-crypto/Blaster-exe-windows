@@ -150,5 +150,5 @@ test -x "${OUT}/launch-windows"
 test -f "${OUT}/runtime.json"
 
 sudo find "${OUT}" -type f -print | sort > "${OUT}/MANIFEST.txt"
-du -sh "${OUT}"
+sudo du -sh "${OUT}"
 echo "Runtime creado: ${OUT}"
