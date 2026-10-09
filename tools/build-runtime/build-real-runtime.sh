@@ -94,9 +94,13 @@ docker run --rm \
     rm -rf /var/lib/apt/lists/*
   '
 
-if [ ! -x "${OUT}/wine/usr/local/bin/wine64" ]; then
-  echo "ERROR: Wine64 no fue generado en el entorno Debian Bookworm."
+if [ ! -x "${OUT}/wine/usr/local/bin/wine" ] && [ ! -x "${OUT}/wine/usr/local/bin/wine64" ]; then
+  echo "ERROR: No se encontró el lanzador Wine en el entorno Debian Bookworm."
+  find "${OUT}/wine/usr/local/bin" -maxdepth 1 -type f -o -type l || true
   exit 22
+fi
+if [ ! -x "${OUT}/wine/usr/local/bin/wine64" ]; then
+  ln -s wine "${OUT}/wine/usr/local/bin/wine64"
 fi
 
 echo "[3/5] Crear rootfs amd64 Debian Bookworm para el guest"
